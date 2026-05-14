@@ -1,4 +1,4 @@
-name: Injector_Final_Fix_Real
+name: Injector_Orion_Fix
 on: [push, workflow_dispatch]
 jobs:
   build:
@@ -11,40 +11,34 @@ jobs:
       - name: Setup Theos
         run: |
           export THEOS=$GITHUB_WORKSPACE/theos
-          # Theos'u indir
           git clone --recursive https://github.com/theos/theos.git $THEOS
-          # SDK'yı GitHub API'ye takılmadan direkt çekelim
           mkdir -p $THEOS/sdks
           curl -L https://github.com/theos/sdks/archive/master.tar.gz | tar -xz -C $THEOS/sdks --strip-components=1
           echo "THEOS=$THEOS" >> $GITHUB_ENV
 
-      - name: Fix Files and Libraries
+      - name: Prepare Project
         run: |
-          # 1. Zip dosyasını aç
           unzip -o "*.zip"
-          
-          # 2. Makefile'ın nerede olduğunu bul ve oraya git
           MAKE_PATH=$(find . -name "Makefile" | head -n 1)
           PROJ_DIR=$(dirname "$MAKE_PATH")
           
-          # 3. KittyMemory'yi indir ve projenin içine koy
+          # KittyMemory'yi olması gereken yere çek
           git clone https://github.com/joeyjurjens/KittyMemory.git "$PROJ_DIR/KittyMemory"
           
-          # 4. Makefile içindeki hatalı yolları düzelt
-          sed -i '' 's/-IKittyMemory//g' "$PROJ_DIR/Makefile" || true
+          # Makefile'ı Orion hatalarından temizleyip standart Theos'a zorla
+          sed -i '' 's/include $(ORION)\/makefiles\/tweak.mk/include $(THEOS)\/makefiles\/common.mk\ninclude $(THEOS)\/makefiles\/tweak.mk/g' "$PROJ_DIR/Makefile" || true
           
-          # Proje dizinini bir sonraki adım için sakla
           echo "PROJ_DIR=$PROJ_DIR" >> $GITHUB_ENV
 
       - name: Build Project
         run: |
           cd $PROJ_DIR
           export THEOS=$GITHUB_WORKSPACE/theos
-          # Paketi oluştur
-          make package FINALPACKAGE=1
-
-      - name: Upload Finished .deb
+          # Hataları daha net görmek ve Orion'u bypass etmek için
+          make package FINALPACKAGE=1 DEBUG=0
+          
+      - name: Upload Result
         uses: actions/upload-artifact@v4
         with:
-          name: Standoff2-Injector-Package
+          name: S2-Injector-Package
           path: ${{ env.PROJ_DIR }}/packages/*.deb
