@@ -1,4 +1,4 @@
-name: Injector_Final_Fix_v4
+name: Injector_Build_Final_Attempt
 on: [push, workflow_dispatch]
 jobs:
   build:
@@ -6,19 +6,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Force Extract Files
+      - name: Extract and Locate Files
         run: |
+          # Bulunan tüm zip dosyalarını aç
           unzip -o "*.zip"
-          # Brazilix klasörünün içindekileri ana dizine taşı
-          mv brazilix/* . || true
-          mv brazilix/.* . || true
-          # Alt klasörleri de kontrol et
-          ls -R
+          # Makefile nerede olursa olsun bul ve bulunduğu klasördeki her şeyi ana dizine taşı
+          MAKEFILE_PATH=$(find . -name "makefile" -o -name "Makefile" | head -n 1)
+          if [ -z "$MAKEFILE_PATH" ]; then
+            echo "HATA: Zip içinde Makefile bulunamadı!"
+            ls -R
+            exit 1
+          fi
+          MAKEFILE_DIR=$(dirname "$MAKEFILE_PATH")
+          mv "$MAKEFILE_DIR"/* . || true
+          echo "Dosyalar başarıyla taşındı."
 
       - name: Setup Theos & SDK
         run: |
           bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
           echo "THEOS=$HOME/theos" >> $GITHUB_ENV
+          # SDK'ları en güncel kaynaktan çek
           curl -LO https://github.com/theos/sdks/archive/master.zip
           mkdir -p $HOME/theos/sdks
           unzip -o master.zip -d $HOME/theos/sdks
@@ -27,19 +34,13 @@ jobs:
       - name: Build Project
         run: |
           export THEOS=$HOME/theos
-          # Makefile'ı bul ve derlemeyi başlat
-          if [ -f "makefile" ] || [ -f "Makefile" ]; then
-            make package FINALPACKAGE=1
-          else
-            echo "Hata: Makefile hala bulunamadı, dosya yapısını kontrol et!"
-            ls -al
-            exit 1
-          fi
+          # Derleme işlemini başlat
+          make package FINALPACKAGE=1
           
       - name: Upload Result
         uses: actions/upload-artifact@v4
         with:
-          name: S2-Injector-App
+          name: S2-Injector-Final
           path: |
             packages/*.deb
             *.ipa
