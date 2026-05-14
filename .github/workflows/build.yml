@@ -1,4 +1,4 @@
-name: Injector_Fix_KittyMemory
+   name: Injector_Final_Solution
 on: [push, workflow_dispatch]
 jobs:
   build:
@@ -6,16 +6,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Prep and Get Missing Libs
+      - name: Prep Files and Libraries
         run: |
           unzip -o "*.zip"
-          # Makefile'ı bul ve dosyaları taşı
+          # Proje dosyalarını ana dizine çek
           MAKEFILE_PATH=$(find . -name "makefile" -o -name "Makefile" | head -n 1)
           MAKEFILE_DIR=$(dirname "$MAKEFILE_PATH")
           cp -R "$MAKEFILE_DIR"/* . || true
           
-          # EKSİK OLAN KittyMemory KÜTÜPHANESİNİ ÇEKELİM
+          # KittyMemory'yi indir ve klasör yapısını düzelt
           git clone https://github.com/joeyjurjens/KittyMemory.git
+          # Eğer proje KittyMemory'yi üst klasörde arıyorsa oraya da kopyalayalım
+          cp -R KittyMemory/* . || true
           
           chmod -R 777 .
 
@@ -32,13 +34,15 @@ jobs:
       - name: Build Project
         run: |
           export THEOS=$GITHUB_WORKSPACE/theos
-          # Derleme
+          # Klasör yapısını listele (Hata olursa nerede olduğumuzu görelim)
+          ls -R
           make package FINALPACKAGE=1
           
       - name: Upload Result
         uses: actions/upload-artifact@v4
         with:
-          name: S2-Injector-Fixed
+          name: S2-Injector-Success
           path: |
             packages/*.deb
             *.deb
+       
