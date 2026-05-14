@@ -1,4 +1,4 @@
-name: Injector_Build_From_Zip
+name: Injector_Build_v2
 on: [push, workflow_dispatch]
 jobs:
   build:
@@ -8,8 +8,9 @@ jobs:
       
       - name: Unzip Files
         run: |
-          unzip -o "*.zip"
-          mv */* . || true 
+          unzip -o kod.zip
+          # Klasörlerin içinde ne var kontrol et ve ana dizine taşı
+          find . -maxdepth 3 -name "makefile" -exec dirname {} \; | xargs -I {} mv {}/* . || true
 
       - name: Setup Theos
         run: |
@@ -19,15 +20,21 @@ jobs:
       - name: Build Project
         run: |
           export THEOS=$HOME/theos
-          chmod +x build.sh || true
-          if [ -f "build.sh" ]; then ./build.sh; else make package FINALPACKAGE=1; fi
+          # Eğer build.sh varsa çalıştır, yoksa make ile paketle
+          if [ -f "build.sh" ]; then
+            chmod +x build.sh
+            ./build.sh
+          else
+            make package FINALPACKAGE=1
+          fi
           
       - name: Upload Result
         uses: actions/upload-artifact@v4
         with:
-          name: Standoff-Injector-Output
+          name: Standoff-Injector-Final
           path: |
             packages/*.deb
             *.ipa
             build/*.ipa
             *.deb
+            ./*.deb
