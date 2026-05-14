@@ -1,4 +1,4 @@
-name: Injector_Final_Fix
+name: Injector_Final_Fix_v4
 on: [push, workflow_dispatch]
 jobs:
   build:
@@ -6,36 +6,40 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Extract and Move Files
+      - name: Force Extract Files
         run: |
           unzip -o "*.zip"
-          # Klasör içindeki dosyaları ana dizine taşı (brazilix vb. klasörleri aşar)
-          find . -name "makefile" -exec dirname {} \; | xargs -I {} mv {}/* . || true
-          find . -name "Makefile" -exec dirname {} \; | xargs -I {} mv {}/* . || true
+          # Brazilix klasörünün içindekileri ana dizine taşı
+          mv brazilix/* . || true
+          mv brazilix/.* . || true
+          # Alt klasörleri de kontrol et
+          ls -R
 
       - name: Setup Theos & SDK
         run: |
           bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
-          curl -LO https://github.com/theos/sdks/archive/master.zip
-          unzip master.zip -d $HOME/theos/sdks
           echo "THEOS=$HOME/theos" >> $GITHUB_ENV
+          curl -LO https://github.com/theos/sdks/archive/master.zip
+          mkdir -p $HOME/theos/sdks
+          unzip -o master.zip -d $HOME/theos/sdks
+          mv $HOME/theos/sdks/sdks-master/* $HOME/theos/sdks/ || true
           
       - name: Build Project
         run: |
           export THEOS=$HOME/theos
-          # Dosyalar geldi mi kontrol et
-          ls -R
+          # Makefile'ı bul ve derlemeyi başlat
           if [ -f "makefile" ] || [ -f "Makefile" ]; then
             make package FINALPACKAGE=1
           else
-            echo "Kritik Hata: Makefile hala bulunamadı!"
+            echo "Hata: Makefile hala bulunamadı, dosya yapısını kontrol et!"
+            ls -al
             exit 1
           fi
           
       - name: Upload Result
         uses: actions/upload-artifact@v4
         with:
-          name: Standoff-Injector-App
+          name: S2-Injector-App
           path: |
             packages/*.deb
             *.ipa
