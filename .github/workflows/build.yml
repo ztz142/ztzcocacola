@@ -1,4 +1,4 @@
-name: Injector_Build_Final_Attempt
+name: Injector_Auto_Fix
 on: [push, workflow_dispatch]
 jobs:
   build:
@@ -6,26 +6,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Extract and Locate Files
+      - name: Extract and Find Project
         run: |
-          # Bulunan tüm zip dosyalarını aç
           unzip -o "*.zip"
-          # Makefile nerede olursa olsun bul ve bulunduğu klasördeki her şeyi ana dizine taşı
-          MAKEFILE_PATH=$(find . -name "makefile" -o -name "Makefile" | head -n 1)
-          if [ -z "$MAKEFILE_PATH" ]; then
+          # Makefile dosyasının olduğu klasörü bul
+          MAKEFILE_DIR=$(find . -name "makefile" -o -name "Makefile" | head -n 1 | xargs dirname)
+          if [ -z "$MAKEFILE_DIR" ]; then
             echo "HATA: Zip içinde Makefile bulunamadı!"
             ls -R
             exit 1
           fi
-          MAKEFILE_DIR=$(dirname "$MAKEFILE_PATH")
+          # Tüm içeriği o klasörden ana dizine taşı
           mv "$MAKEFILE_DIR"/* . || true
-          echo "Dosyalar başarıyla taşındı."
+          echo "Proje dizini bulundu: $MAKEFILE_DIR"
 
       - name: Setup Theos & SDK
         run: |
           bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
           echo "THEOS=$HOME/theos" >> $GITHUB_ENV
-          # SDK'ları en güncel kaynaktan çek
           curl -LO https://github.com/theos/sdks/archive/master.zip
           mkdir -p $HOME/theos/sdks
           unzip -o master.zip -d $HOME/theos/sdks
@@ -34,8 +32,14 @@ jobs:
       - name: Build Project
         run: |
           export THEOS=$HOME/theos
-          # Derleme işlemini başlat
-          make package FINALPACKAGE=1
+          # Eksik dosyaları kontrol et ve derle
+          if [ -f "makefile" ] || [ -f "Makefile" ]; then
+            make package FINALPACKAGE=1
+          else
+            echo "Kritik Hata: Makefile hala yerinde değil!"
+            ls -al
+            exit 1
+          fi
           
       - name: Upload Result
         uses: actions/upload-artifact@v4
