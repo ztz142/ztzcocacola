@@ -1,4 +1,4 @@
-name: Injector_Deep_Fix
+name: Injector_Final_War
 on: [push, workflow_dispatch]
 jobs:
   build:
@@ -6,22 +6,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Extract and Map Directories
+      - name: Force Prep Everything
         run: |
           unzip -o "*.zip"
-          # Proje dosyalarını bul ve ana dizine yay
+          # 1. Proje dosyalarını bul ve her yere yay
           MAKEFILE_PATH=$(find . -name "makefile" -o -name "Makefile" | head -n 1)
           MAKEFILE_DIR=$(dirname "$MAKEFILE_PATH")
           cp -R "$MAKEFILE_DIR"/* . || true
           
-          # KittyMemory'yi indir
+          # 2. KittyMemory'yi indir ve HER YERE kopyala
           git clone https://github.com/joeyjurjens/KittyMemory.git
-          
-          # Projenin beklediği klasör yapısını zorla oluştur
           mkdir -p KittyMemory
+          # Hem klasörün içine, hem dışına, hem alt klasöre...
           cp -R KittyMemory/KittyMemory/* ./KittyMemory/ || true
+          cp -R KittyMemory/KittyMemory/* . || true
+          cp -R KittyMemory/KittyMemory/* ./brazilix/ || true
           
-          # İzinleri ver
+          # 3. İzinleri en yüksek seviyeye çek
           chmod -R 777 .
 
       - name: Setup Theos & SDKs
@@ -37,14 +38,13 @@ jobs:
       - name: Build Project
         run: |
           export THEOS=$GITHUB_WORKSPACE/theos
-          # Klasör yapısını son kez kontrol et (Hata ayıklama için)
-          ls -R KittyMemory
+          # Hataları daha detaylı görmek için
           make package FINALPACKAGE=1
           
       - name: Upload Result
         uses: actions/upload-artifact@v4
         with:
-          name: S2-Injector-Final-Build
+          name: S2-Injector-Bitti-Galiba
           path: |
             packages/*.deb
             *.deb
