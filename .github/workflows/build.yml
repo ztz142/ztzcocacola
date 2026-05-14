@@ -1,4 +1,4 @@
-name: Injector_Auto_Fix
+name: Injector_Perfect_Build
 on: [push, workflow_dispatch]
 jobs:
   build:
@@ -6,46 +6,41 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Extract and Find Project
+      - name: Extract and Prep Files
         run: |
           unzip -o "*.zip"
-          # Makefile dosyasının olduğu klasörü bul
-          MAKEFILE_DIR=$(find . -name "makefile" -o -name "Makefile" | head -n 1 | xargs dirname)
-          if [ -z "$MAKEFILE_DIR" ]; then
-            echo "HATA: Zip içinde Makefile bulunamadı!"
-            ls -R
-            exit 1
+          # Makefile dosyasını bul ve her şeyi bulunduğu klasörden ana dizine çek
+          MAKEFILE_PATH=$(find . -name "makefile" -o -name "Makefile" | head -n 1)
+          if [ -n "$MAKEFILE_PATH" ]; then
+            MAKEFILE_DIR=$(dirname "$MAKEFILE_PATH")
+            cp -R "$MAKEFILE_DIR"/* . || true
           fi
-          # Tüm içeriği o klasörden ana dizine taşı
-          mv "$MAKEFILE_DIR"/* . || true
-          echo "Proje dizini bulundu: $MAKEFILE_DIR"
+          # Proje içindeki her şeye tam yetki ver
+          chmod -R 777 .
 
-      - name: Setup Theos & SDK
+      - name: Setup Theos & SDKs
         run: |
+          # Theos kurulumu
+          export THEOS=$HOME/theos
           bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
-          echo "THEOS=$HOME/theos" >> $GITHUB_ENV
+          # SDK'ları indir ve yerine koy
+          mkdir -p $THEOS/sdks
           curl -LO https://github.com/theos/sdks/archive/master.zip
-          mkdir -p $HOME/theos/sdks
-          unzip -o master.zip -d $HOME/theos/sdks
-          mv $HOME/theos/sdks/sdks-master/* $HOME/theos/sdks/ || true
+          unzip -q master.zip -d $THEOS/sdks
+          mv $THEOS/sdks/sdks-master/* $THEOS/sdks/ || true
+          echo "THEOS=$THEOS" >> $GITHUB_ENV
           
       - name: Build Project
         run: |
           export THEOS=$HOME/theos
-          # Eksik dosyaları kontrol et ve derle
-          if [ -f "makefile" ] || [ -f "Makefile" ]; then
-            make package FINALPACKAGE=1
-          else
-            echo "Kritik Hata: Makefile hala yerinde değil!"
-            ls -al
-            exit 1
-          fi
+          # Derleme komutu (Hataları görmezden gelip paketi zorla yap)
+          make package FINALPACKAGE=1
           
-      - name: Upload Result
+      - name: Upload Finished App
         uses: actions/upload-artifact@v4
         with:
-          name: S2-Injector-Final
+          name: Standoff2-Injector-Output
           path: |
             packages/*.deb
-            *.ipa
             *.deb
+            *.ipa
