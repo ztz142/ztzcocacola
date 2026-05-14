@@ -1,4 +1,4 @@
-name: Injector_Final_Victory
+name: Injector_Final_Victory_v2
 on: [push, workflow_dispatch]
 jobs:
   build:
@@ -6,22 +6,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Force Everything to Root
+      - name: Force Fix File Names
         run: |
           unzip -o "*.zip"
-          # 1. Bütün dosyaları alt klasörlerden ana dizine çıkar
+          # 1. Her şeyi ana dizine çıkar (dosyalar nerede olursa olsun)
           find . -mindepth 2 -type f -exec mv -t . {} + || true
           
-          # 2. KittyMemory'yi indir ve dosyaları ana dizine dök
+          # 2. Dosya isimlerini Makefile ile eşitlemek için zorla küçük harf yapalım
+          # Özellikle brazilix.mm dosyasını bul ve adını tam olarak 'brazilix.mm' yap
+          mv $(find . -iname "brazilix.mm") brazilix.mm || true
+          
+          # 3. KittyMemory'yi çek ve eksik headerları tamamla
           git clone https://github.com/joeyjurjens/KittyMemory.git
           cp -R KittyMemory/KittyMemory/* . || true
           
-          # 3. Makefile içindeki hatalı olabilecek yolları temizle
+          # 4. Makefile'ı temizle (Gereksiz yolları sil)
           sed -i '' 's/KittyMemory\///g' Makefile || true
           sed -i '' 's/-IKittyMemory//g' Makefile || true
           
-          # 4. Dosya isimlerini kontrol et (Hata ayıklama için)
-          ls -R
           chmod -R 777 .
 
       - name: Setup Theos & SDKs
@@ -37,13 +39,14 @@ jobs:
       - name: Build Project
         run: |
           export THEOS=$GITHUB_WORKSPACE/theos
-          # Derlemeyi başlat
+          # Dosyaları listele ki hata olursa neyi görmediğini anlayalım
+          ls -F
           make package FINALPACKAGE=1
           
-      - name: Upload Artifacts
+      - name: Upload Finished App
         uses: actions/upload-artifact@v4
         with:
-          name: Standoff2-Final-App
+          name: S2-Injector-Success
           path: |
             packages/*.deb
             *.deb
