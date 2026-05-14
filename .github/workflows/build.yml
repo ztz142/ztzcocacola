@@ -1,4 +1,4 @@
-name: Injector_Perfect_Build
+name: Injector_Final_Fix_v5
 on: [push, workflow_dispatch]
 jobs:
   build:
@@ -6,24 +6,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Extract and Prep Files
+      - name: Extract and Move Files
         run: |
           unzip -o "*.zip"
-          # Makefile dosyasını bul ve her şeyi bulunduğu klasörden ana dizine çek
+          # Makefile nerede olursa olsun bul ve her şeyi oraya taşı
           MAKEFILE_PATH=$(find . -name "makefile" -o -name "Makefile" | head -n 1)
-          if [ -n "$MAKEFILE_PATH" ]; then
-            MAKEFILE_DIR=$(dirname "$MAKEFILE_PATH")
-            cp -R "$MAKEFILE_DIR"/* . || true
-          fi
-          # Proje içindeki her şeye tam yetki ver
+          MAKEFILE_DIR=$(dirname "$MAKEFILE_PATH")
+          cp -R "$MAKEFILE_DIR"/* . || true
           chmod -R 777 .
 
       - name: Setup Theos & SDKs
         run: |
-          # Theos kurulumu
-          export THEOS=$HOME/theos
+          # Theos'u ana dizine kur
+          export THEOS=$GITHUB_WORKSPACE/theos
           bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
-          # SDK'ları indir ve yerine koy
+          # SDK'ları indir
           mkdir -p $THEOS/sdks
           curl -LO https://github.com/theos/sdks/archive/master.zip
           unzip -q master.zip -d $THEOS/sdks
@@ -32,14 +29,14 @@ jobs:
           
       - name: Build Project
         run: |
-          export THEOS=$HOME/theos
-          # Derleme komutu (Hataları görmezden gelip paketi zorla yap)
+          # Theos yolunu tanıt ve derle
+          export THEOS=$GITHUB_WORKSPACE/theos
           make package FINALPACKAGE=1
           
-      - name: Upload Finished App
+      - name: Upload Result
         uses: actions/upload-artifact@v4
         with:
-          name: Standoff2-Injector-Output
+          name: S2-Injector-Success
           path: |
             packages/*.deb
             *.deb
