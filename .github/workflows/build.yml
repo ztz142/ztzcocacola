@@ -1,48 +1,50 @@
-name: Injector_Final_Solution_Fixed
+name: Injector_Final_Fix_Real
 on: [push, workflow_dispatch]
 jobs:
   build:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Ultimate File Prep
-        run: |
-          unzip -o "*.zip"
-          # 1. Her şeyi ana dizine çıkar
-          find . -mindepth 2 -type f -exec mv -t . {} + || true
-          
-          # 2. KittyMemory'yi indir
-          git clone https://github.com/joeyjurjens/KittyMemory.git
-          cp -R KittyMemory/KittyMemory/* . || true
-          
-          # 3. Makefile'ı zorla güncelle (Tweak.x ve brazilix karmaşasını bitir)
-          # Makefile içinde .mm veya .x uzantılı ne varsa onu bulup yolu temizle
-          sed -i '' 's/KittyMemory\///g' Makefile || true
-          sed -i '' 's/-IKittyMemory//g' Makefile || true
-          
-          chmod -R 777 .
+        with:
+          submodules: recursive
 
-      - name: Setup Theos & SDKs
+      - name: Setup Theos
         run: |
           export THEOS=$GITHUB_WORKSPACE/theos
-          bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
+          # Theos'u indir
+          git clone --recursive https://github.com/theos/theos.git $THEOS
+          # SDK'yı GitHub API'ye takılmadan direkt çekelim
           mkdir -p $THEOS/sdks
-          curl -LO https://github.com/theos/sdks/archive/master.zip
-          unzip -q master.zip -d $THEOS/sdks
-          mv $THEOS/sdks/sdks-master/* $THEOS/sdks/ || true
+          curl -L https://github.com/theos/sdks/archive/master.tar.gz | tar -xz -C $THEOS/sdks --strip-components=1
           echo "THEOS=$THEOS" >> $GITHUB_ENV
+
+      - name: Fix Files and Libraries
+        run: |
+          # 1. Zip dosyasını aç
+          unzip -o "*.zip"
           
+          # 2. Makefile'ın nerede olduğunu bul ve oraya git
+          MAKE_PATH=$(find . -name "Makefile" | head -n 1)
+          PROJ_DIR=$(dirname "$MAKE_PATH")
+          
+          # 3. KittyMemory'yi indir ve projenin içine koy
+          git clone https://github.com/joeyjurjens/KittyMemory.git "$PROJ_DIR/KittyMemory"
+          
+          # 4. Makefile içindeki hatalı yolları düzelt
+          sed -i '' 's/-IKittyMemory//g' "$PROJ_DIR/Makefile" || true
+          
+          # Proje dizinini bir sonraki adım için sakla
+          echo "PROJ_DIR=$PROJ_DIR" >> $GITHUB_ENV
+
       - name: Build Project
         run: |
+          cd $PROJ_DIR
           export THEOS=$GITHUB_WORKSPACE/theos
-          # Derlemeyi başlat - Bu sefer Tweak.x üzerinden yürüyecek
+          # Paketi oluştur
           make package FINALPACKAGE=1
-          
-      - name: Upload Result
+
+      - name: Upload Finished .deb
         uses: actions/upload-artifact@v4
         with:
-          name: Standoff2-Injector-FINAL
-          path: |
-            packages/*.deb
-            *.deb
+          name: Standoff2-Injector-Package
+          path: ${{ env.PROJ_DIR }}/packages/*.deb
