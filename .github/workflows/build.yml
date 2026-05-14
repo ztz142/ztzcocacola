@@ -1,4 +1,4 @@
-name: Injector_Build_v2
+name: Injector_Final_Fix
 on: [push, workflow_dispatch]
 jobs:
   build:
@@ -6,35 +6,37 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Unzip Files
+      - name: Extract and Move Files
         run: |
-          unzip -o kod.zip
-          # Klasörlerin içinde ne var kontrol et ve ana dizine taşı
-          find . -maxdepth 3 -name "makefile" -exec dirname {} \; | xargs -I {} mv {}/* . || true
+          unzip -o "*.zip"
+          # Klasör içindeki dosyaları ana dizine taşı (brazilix vb. klasörleri aşar)
+          find . -name "makefile" -exec dirname {} \; | xargs -I {} mv {}/* . || true
+          find . -name "Makefile" -exec dirname {} \; | xargs -I {} mv {}/* . || true
 
-      - name: Setup Theos
+      - name: Setup Theos & SDK
         run: |
           bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
+          curl -LO https://github.com/theos/sdks/archive/master.zip
+          unzip master.zip -d $HOME/theos/sdks
           echo "THEOS=$HOME/theos" >> $GITHUB_ENV
           
       - name: Build Project
         run: |
           export THEOS=$HOME/theos
-          # Eğer build.sh varsa çalıştır, yoksa make ile paketle
-          if [ -f "build.sh" ]; then
-            chmod +x build.sh
-            ./build.sh
-          else
+          # Dosyalar geldi mi kontrol et
+          ls -R
+          if [ -f "makefile" ] || [ -f "Makefile" ]; then
             make package FINALPACKAGE=1
+          else
+            echo "Kritik Hata: Makefile hala bulunamadı!"
+            exit 1
           fi
           
       - name: Upload Result
         uses: actions/upload-artifact@v4
         with:
-          name: Standoff-Injector-Final
+          name: Standoff-Injector-App
           path: |
             packages/*.deb
             *.ipa
-            build/*.ipa
             *.deb
-            ./*.deb
