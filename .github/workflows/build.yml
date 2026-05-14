@@ -1,26 +1,28 @@
-name: Injector_Final_Fix_v5
+name: Injector_Global_Fix_Final
 on: [push, workflow_dispatch]
 jobs:
   build:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       
-      - name: Extract and Move Files
+      - name: Force Prep
         run: |
           unzip -o "*.zip"
-          # Makefile nerede olursa olsun bul ve her şeyi oraya taşı
+          # Makefile'ı bul ve her şeyi oraya taşı, alt klasörleri de ana dizine yay
           MAKEFILE_PATH=$(find . -name "makefile" -o -name "Makefile" | head -n 1)
           MAKEFILE_DIR=$(dirname "$MAKEFILE_PATH")
           cp -R "$MAKEFILE_DIR"/* . || true
+          # KittyMemory veya benzeri eksik olabilecek dizinleri oluştur
+          mkdir -p KittyMemory ImGui 
           chmod -R 777 .
 
       - name: Setup Theos & SDKs
         run: |
-          # Theos'u ana dizine kur
           export THEOS=$GITHUB_WORKSPACE/theos
           bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
-          # SDK'ları indir
           mkdir -p $THEOS/sdks
           curl -LO https://github.com/theos/sdks/archive/master.zip
           unzip -q master.zip -d $THEOS/sdks
@@ -29,15 +31,14 @@ jobs:
           
       - name: Build Project
         run: |
-          # Theos yolunu tanıt ve derle
           export THEOS=$GITHUB_WORKSPACE/theos
-          make package FINALPACKAGE=1
+          # Hataları daha net görmek için 'messages=yes' ekledik
+          make package FINALPACKAGE=1 messages=yes
           
       - name: Upload Result
         uses: actions/upload-artifact@v4
         with:
-          name: S2-Injector-Success
+          name: S2-Injector-Output
           path: |
             packages/*.deb
             *.deb
-            *.ipa
