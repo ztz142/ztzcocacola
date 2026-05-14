@@ -1,4 +1,4 @@
-name: Injector_Final_Destroyer
+name: Injector_Final_Victory
 on: [push, workflow_dispatch]
 jobs:
   build:
@@ -6,22 +6,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Ultimate Prep
+      - name: Force Everything to Root
         run: |
           unzip -o "*.zip"
-          # 1. Makefile'ın olduğu klasörü bul
-          TARGET_DIR=$(find . -name "makefile" -o -name "Makefile" | head -n 1 | xargs dirname)
+          # 1. Bütün dosyaları alt klasörlerden ana dizine çıkar
+          find . -mindepth 2 -type f -exec mv -t . {} + || true
           
-          # 2. Bütün projeyi ana dizine kopyala
-          cp -R "$TARGET_DIR"/* . || true
-          
-          # 3. KittyMemory'yi indir ve dosyaları ana dizine dök
+          # 2. KittyMemory'yi indir ve dosyaları ana dizine dök
           git clone https://github.com/joeyjurjens/KittyMemory.git
           cp -R KittyMemory/KittyMemory/* . || true
           
-          # 4. Makefile içindeki "KittyMemory/" yazılarını temizle (Çünkü artık her şey aynı yerde)
+          # 3. Makefile içindeki hatalı olabilecek yolları temizle
           sed -i '' 's/KittyMemory\///g' Makefile || true
+          sed -i '' 's/-IKittyMemory//g' Makefile || true
           
+          # 4. Dosya isimlerini kontrol et (Hata ayıklama için)
+          ls -R
           chmod -R 777 .
 
       - name: Setup Theos & SDKs
@@ -37,14 +37,13 @@ jobs:
       - name: Build Project
         run: |
           export THEOS=$GITHUB_WORKSPACE/theos
-          # Dosyalar burada mı diye kontrol et (Hata ayıklama için)
-          ls -a
+          # Derlemeyi başlat
           make package FINALPACKAGE=1
           
-      - name: Upload Result
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Standoff2-Injector-Final
+          name: Standoff2-Final-App
           path: |
             packages/*.deb
             *.deb
