@@ -1,4 +1,4 @@
-name: Injector_Final_War
+name: Injector_Final_Fix_v6
 on: [push, workflow_dispatch]
 jobs:
   build:
@@ -6,23 +6,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Force Prep Everything
+      - name: Prep Files & Fix Makefile
         run: |
           unzip -o "*.zip"
-          # 1. Proje dosyalarını bul ve her yere yay
+          # Proje dosyalarını bul ve her şeyi ana dizine taşı
           MAKEFILE_PATH=$(find . -name "makefile" -o -name "Makefile" | head -n 1)
           MAKEFILE_DIR=$(dirname "$MAKEFILE_PATH")
           cp -R "$MAKEFILE_DIR"/* . || true
           
-          # 2. KittyMemory'yi indir ve HER YERE kopyala
+          # KittyMemory'yi indir
           git clone https://github.com/joeyjurjens/KittyMemory.git
-          mkdir -p KittyMemory
-          # Hem klasörün içine, hem dışına, hem alt klasöre...
-          cp -R KittyMemory/KittyMemory/* ./KittyMemory/ || true
-          cp -R KittyMemory/KittyMemory/* . || true
-          cp -R KittyMemory/KittyMemory/* ./brazilix/ || true
           
-          # 3. İzinleri en yüksek seviyeye çek
+          # Makefile içindeki hatalı yolları düzelt (Otomatik Tamir)
+          sed -i '' 's/-IKittyMemory//g' Makefile || true
+          sed -i '' 's/KittyMemory\///g' Makefile || true
+          
+          # Dosyaları her yere kopyala ki hata payı kalmasın
+          mkdir -p KittyMemory
+          cp -R KittyMemory/* ./KittyMemory/ || true
+          cp -R KittyMemory/KittyMemory/* . || true
+          
           chmod -R 777 .
 
       - name: Setup Theos & SDKs
@@ -38,13 +41,13 @@ jobs:
       - name: Build Project
         run: |
           export THEOS=$GITHUB_WORKSPACE/theos
-          # Hataları daha detaylı görmek için
+          # Derlemeyi başlat
           make package FINALPACKAGE=1
           
       - name: Upload Result
         uses: actions/upload-artifact@v4
         with:
-          name: S2-Injector-Bitti-Galiba
+          name: S2-Injector-Bitti-Mi
           path: |
             packages/*.deb
             *.deb
