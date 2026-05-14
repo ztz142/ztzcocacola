@@ -1,4 +1,4 @@
-name: Injector_Final_Victory_v3
+name: Injector_Final_Solution_Fixed
 on: [push, workflow_dispatch]
 jobs:
   build:
@@ -6,21 +6,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Rename and Prep Files
+      - name: Ultimate File Prep
         run: |
           unzip -o "*.zip"
-          # 1. Bütün dosyaları ana dizine çıkar
+          # 1. Her şeyi ana dizine çıkar
           find . -mindepth 2 -type f -exec mv -t . {} + || true
           
-          # 2. DOSYA ADINI DÜZELT (Büyük B -> küçük b)
-          # Eğer dosya ismi Brazilix.mm ise onu brazilix.mm yapıyoruz
-          mv Brazilix.mm brazilix.mm || true
-          
-          # 3. KittyMemory'yi indir ve dosyaları ana dizine dök
+          # 2. KittyMemory'yi indir
           git clone https://github.com/joeyjurjens/KittyMemory.git
           cp -R KittyMemory/KittyMemory/* . || true
           
-          # 4. Makefile içindeki temizlik
+          # 3. Makefile'ı zorla güncelle (Tweak.x ve brazilix karmaşasını bitir)
+          # Makefile içinde .mm veya .x uzantılı ne varsa onu bulup yolu temizle
           sed -i '' 's/KittyMemory\///g' Makefile || true
           sed -i '' 's/-IKittyMemory//g' Makefile || true
           
@@ -39,13 +36,13 @@ jobs:
       - name: Build Project
         run: |
           export THEOS=$GITHUB_WORKSPACE/theos
-          # Derleme
+          # Derlemeyi başlat - Bu sefer Tweak.x üzerinden yürüyecek
           make package FINALPACKAGE=1
           
       - name: Upload Result
         uses: actions/upload-artifact@v4
         with:
-          name: S2-Injector-Bitti-Gitti
+          name: Standoff2-Injector-FINAL
           path: |
             packages/*.deb
             *.deb
